@@ -13,16 +13,17 @@ public:
 		: _position{0.0, 0.0, 0.0}, _size{size} {}
 	Drawable(glm::vec3 position, Size3<float> size)
 		: _position{position}, _size{size} {}
-	virtual ~Drawable() = default;
+	virtual ~Drawable();
 
 	virtual void draw() = 0;
 	virtual void upload(GLuint program);
 
 	virtual void move(glm::vec3 newPosition) { _position = newPosition; }
-	virtual glm::vec3 at() { return _position; };
+	virtual glm::vec3 at() { return _position; }
+	virtual Size3<float> dim() { return _size; }
 
 protected:
-	virtual void uploadPerspective();
+	virtual glm::mat4 transformation();
 
 	glm::vec3 _position{0.0, 0.0, 0.0};
 	Size3<float> _size;

@@ -13,6 +13,8 @@ GLuint createShader(const char* source, GLenum shaderType);
 GLuint buildProgram(const char* vertexShaderFile, const char* fragmentShaderFile);
 
 // experimental
+#include <glm/glm.hpp>
 void uploadMat4(GLuint progID, const float* mat, const char* loc);
+void uploadMat4(GLuint progID, glm::mat4& mat, const char* loc);
 
 #endif

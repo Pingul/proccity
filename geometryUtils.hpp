@@ -38,7 +38,21 @@ public:
 	T width;
 	T height;
 	T depth;
+
+	Size3<T> mask(float x, float y, float z) const { return Size3<T>{width*x, height*y, depth*z}; }
 };
+
+template<class T>
+inline glm::vec3 operator+(glm::vec3 v, Size3<T> s)
+{
+	return glm::vec3{v.x + (float)s.width, v.y + (float)s.height, v.z + (float)s.depth};
+}
+
+template<class T>
+inline glm::vec3 operator+(Size3<T> s, glm::vec3 v)
+{
+	return v + s;
+}
 
 template<class T>
 inline std::ostream& operator<<(std::ostream& os, const Size3<T> s)

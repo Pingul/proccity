@@ -32,7 +32,7 @@ void initGeometry()
 	logError("after shaders");
 
 	Size3<float> s{1.0, 3.0, 5.0};
-	b = new Building(glm::vec3(0.0, 0.0, 0.0), s);
+	b = &Building::generate(glm::vec3(0.0, 0.0, 0.0), s);
 	b->upload(program);
 
 	// Camera
@@ -58,8 +58,7 @@ void initGeometry()
 
 void draw(float t)
 {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
 	glEnable(GL_DEPTH_TEST);
 	glUseProgram(program);
 	camera->pollWindowForCameraMovement(window);
@@ -103,6 +102,19 @@ void show()
 
 		if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
 			glfwSetWindowShouldClose(window, GL_TRUE);
+		else if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS)
+		{
+			static double lastT = 0.0;
+			if (t - lastT > 0.2)
+			{
+				glUseProgram(program);
+				delete b;
+				Size3<float> s{1.0, 3.0, 5.0};
+				b = &Building::generate(glm::vec3(0.0, 0.0, 0.0), s);
+				b->upload(program);
+				lastT = t;
+			}
+		}
 	}
 }
 

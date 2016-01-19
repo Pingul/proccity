@@ -120,3 +120,9 @@ void uploadMat4(GLuint progID, const float* mat, const char* loc)
 {
 	glUniformMatrix4fv(glGetUniformLocation(progID, loc), 1, GL_FALSE, mat);
 }
+
+#include <glm/gtc/type_ptr.hpp>
+void uploadMat4(GLuint progID, glm::mat4& mat, const char* loc)
+{
+	uploadMat4(progID, glm::value_ptr(mat), loc);
+}

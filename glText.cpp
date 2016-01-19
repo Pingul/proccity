@@ -135,10 +135,12 @@ void Textbox::upload(GLuint programID)
 	_loaded = true;
 }
 
+#include "glUtilities.hpp"
+
 void Textbox::draw()
 {
 	glBindVertexArray(_VAO);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, _textureHandle);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, _elements.size(), GL_UNSIGNED_INT, 0);
 }

@@ -6,6 +6,7 @@
 #include <vector>
 #include "texture.hpp"
 #include "drawable.hpp"
+#include "camera.hpp"
 
 class Block : public Drawable
 {
@@ -17,17 +18,27 @@ public:
 
 	void upload(GLuint programID);
 	void draw();
+	void draw(bool FULL_RES);
+
+	void drawMode(bool fullRes) { _drawFullRes = fullRes || !_textureLowResInited; }
 
 	static std::vector<Block*> roof(glm::vec3 position, Size3<float> size);
-	static Block& office(glm::vec3 position, Size3<float> size);
+	
+	static Block& windowed(glm::vec3 position, Size3<float> size);
 	static Block& base(glm::vec3 position, Size3<float> size);
 
 	void metricsOnTop(float padding, glm::vec3&, Size3<float>&);
+	void randomPosOnTop(glm::vec3&, const Size3<float>&);
 
 private:
 	std::vector<GLfloat> createTextureCoords(float h, float hh, float w, float ww, float www);
 
-	void createWindowTexture();
+	bool _textureLowResInited{false};
+	bool _drawFullRes{true};
+	GLuint _textureHandle_LOWRES;
+	Texture _texture_LOWRES;
+
+	void createWindowTexture(bool FULL_RES = true);
 	void createWindowTextureCoords();
 
 	void createSingleColorTexture(glm::vec3 color = glm::vec3{0.0, 0.0, 0.0});
@@ -46,12 +57,31 @@ public:
 	void upload(GLuint programID);
 	void draw();
 
+	void drawMode(bool fullRes);
+
 	void append(Block&);
+	void append(std::vector<Block*>);
 
 	// We only care about width and depth here
 	static Building& generate(glm::vec3 position, Size3<float> size);
+	static Building& apartments(glm::vec3 position, Size3<float> size);
 private:
 	std::vector<Block*> _blocks;
+};
+
+class TownGrid
+{
+public:
+	TownGrid();
+
+	void upload(GLuint programID);
+	void draw();
+
+	void updateResolution(Camera&);
+
+private:
+	Size2<int> _size;
+	std::vector<Building*> _buildings;
 };
 
 #endif

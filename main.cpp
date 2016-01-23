@@ -18,6 +18,7 @@ GLuint textProgram;
 Camera* camera;
 
 Building* b;
+TownGrid* town;
 Textbox* FPSTextbox;
 Textbox* FPSTextboxCount;
 
@@ -31,9 +32,11 @@ void initGeometry()
 	program = buildProgram("shaders/shader.vert", "shaders/shader.frag");
 	logError("after shaders");
 
-	Size3<float> s{1.0, 3.0, 5.0};
-	b = &Building::generate(glm::vec3(0.0, 0.0, 0.0), s);
-	b->upload(program);
+	// Size3<float> s{2.0, 5.0, 2.0};
+	// b = &Building::apartments(glm::vec3(0.0, 0.0, 0.0), s);
+	// b->upload(program);
+	town = new TownGrid();
+	town->upload(program);
 
 	// Camera
 	camera = new Camera(glm::vec3(1.0, 1.0, -5.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
@@ -63,7 +66,9 @@ void draw(float t)
 	glUseProgram(program);
 	camera->pollWindowForCameraMovement(window);
 	uploadMat4(program, glm::value_ptr(camera->WTVMatrix()), "WTV");
-	b->draw();
+	// b->draw();
+	town->updateResolution(*camera);
+	town->draw();
 
 	glDisable(GL_DEPTH_TEST);
 	glUseProgram(textProgram);
@@ -108,10 +113,11 @@ void show()
 			if (t - lastT > 0.2)
 			{
 				glUseProgram(program);
-				delete b;
-				Size3<float> s{1.0, 3.0, 5.0};
-				b = &Building::generate(glm::vec3(0.0, 0.0, 0.0), s);
-				b->upload(program);
+				delete town;
+				// Size3<float> s{2.0, 5.0, 2.0};
+				// b = &Building::apartments(glm::vec3(0.0, 0.0, 0.0), s);
+				town = new TownGrid();
+				town->upload(program);
 				lastT = t;
 			}
 		}

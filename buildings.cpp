@@ -13,8 +13,8 @@ public:
 	Rand() = default;
 
 	static float next(float a = 0.0, float b = 1.0) { return std::uniform_real_distribution<float>(a, b)((_shared->_generator)); }
-	static float nextNormal(float a = 0.0, float b = 1.0) { return std::normal_distribution<float>(a, b)((_shared->_generator)); }
-	static int nextInt(int a = 0, int b = 100) { return std::uniform_real_distribution<int>(a, b)((_shared->_generator)); }
+	static float nextNormal(float a = 0.0, float b = 1.0) { return std::exponential_distribution<double>(3.5)((_shared->_generator)); }
+	static int nextInt(int a = 0, int b = 100) { return std::uniform_int_distribution<int>(a, b)((_shared->_generator)); }
 
 private:
 	std::default_random_engine _generator;
@@ -84,17 +84,28 @@ void Block::createWindowTextureCoords()
 	_texCoords = createTextureCoords(h, hh, w, ww, www);
 }
 
-void Block::createWindowTexture()
+void Block::createWindowTexture(bool FULL_RES)
 {
 	// std::default_random_engine generator;
 	// std::uniform_real_distribution<float> distribution{0.0, 1.0};
 
 	// Evenly distribute as many as possible through each side
-	const int pixelsPerFloat{100};
-	const Size2<int> windowsPerFloat{10, 8};
-	const Size2<int> windowSize{3, 2};
+	int pixelsPerFloat{100};
+	Size2<int> windowsPerFloat{10, 8};
+	Size2<int> windowSize{3, 2};
+	Texture* texture{&_texture};
 
-	_texture.setSize(Size2<int>{
+	if (!FULL_RES)
+	{
+		pixelsPerFloat = 50;
+		windowsPerFloat = {5, 4};
+		windowSize = {3, 2};
+		texture = &_texture_LOWRES;
+		_textureLowResInited = true;
+		// std::cout << "lowres" << std::endl;
+	}
+
+	texture->setSize(Size2<int>{
 		(int)(pixelsPerFloat*(_size.width*2 + _size.depth*2)), 
 		(int)(pixelsPerFloat*_size.height + 2)
 	});
@@ -125,10 +136,10 @@ void Block::createWindowTexture()
 							(int)round(windowOffsets.y*y) + j,
 						};
 
-						size_t index{_texture.index(pixel.x, pixel.y)};
-						_texture.pixels[3*index] = color;
-						_texture.pixels[3*index + 1] = color;
-						_texture.pixels[3*index + 2] = color;
+						size_t index{texture->index(pixel.x, pixel.y)};
+						texture->pixels[3*index] = color;
+						texture->pixels[3*index + 1] = color;
+						texture->pixels[3*index + 2] = color;
 					}
 				}
 			}
@@ -182,20 +193,30 @@ void Block::metricsOnTop(float padding, glm::vec3& at, Size3<float>& size)
 	at = _position + glm::vec3(padding, _size.height, padding);
 }
 
+void Block::randomPosOnTop(glm::vec3& v, const Size3<float>& otherSize)
+{
+	float x = Rand::next(0.0, _size.width - otherSize.width);
+	float z = Rand::next(0.0, _size.depth - otherSize.depth);
+	v.x = _position.x + x;
+	v.y = _position.y;
+	v.z = _position.z + z;
+}
+
 std::vector<Block*> Block::roof(glm::vec3 position, Size3<float> size)
 {
 	std::vector<Block*> blocks;
-	glm::vec3 color{0.1, 0.1, 0.1};
+	glm::vec3 color{0.05, 0.05, 0.05};
 
 	Block& b = *(new Block(position, {size.width, Rand::next(0.05, 0.25), size.depth}));
 	b.createSingleColorTexture(color);
 	b.createSingleColorTextureCoords();
 	blocks.push_back(&b);
 	
+	int r = Rand::nextInt(0, 2);
 	Block* top = &b;
-	for (int i = 0; i < Rand::nextInt(0, 2); i++)
+	for (int i = 0; i < r; i++)
 	{
-		float c = Rand::next(0.05, 0.15);
+		float c = Rand::next(0.01, 0.1);
 		color = {c, c, c};
 		glm::vec3 pos;
 		Size3<float> s;
@@ -211,10 +232,11 @@ std::vector<Block*> Block::roof(glm::vec3 position, Size3<float> size)
 	return blocks;
 }
 
-Block& Block::office(glm::vec3 position, Size3<float> size)
+Block& Block::windowed(glm::vec3 position, Size3<float> size)
 {
 	Block& b = *(new Block(position, size));
 	b.createWindowTextureCoords();
+	b.createWindowTexture(false);
 	b.createWindowTexture();
 	return b;
 }
@@ -237,15 +259,39 @@ void Block::upload(GLuint programID)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glGenerateMipmap(GL_TEXTURE_2D);
+	// glGenerateMipmap(GL_TEXTURE_2D); // This makes everything significantly slower
+
+	if (_textureLowResInited)
+	{
+		glGenTextures(1, &_textureHandle_LOWRES);
+		glBindTexture(GL_TEXTURE_2D, _textureHandle_LOWRES);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, _texture_LOWRES.size().width, _texture_LOWRES.size().height, 0, GL_RGB, GL_FLOAT, _texture_LOWRES.pixels.data());
+	}
+
+	_texture.setSize({0, 0});
+	_texture_LOWRES.setSize({0, 0});
+
 	glUniform1i(glGetUniformLocation(programID, "windowTexture"), 0); // combines with GL_TEXTURE0 in draw
 }
 
 void Block::draw()
 {
+	draw(true);
+}
+
+void Block::draw(bool FULL_RES)
+{
+
 	glBindVertexArray(_VAO);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, _textureHandle);
+	if (_drawFullRes)
+		glBindTexture(GL_TEXTURE_2D, _textureHandle);
+	else
+		glBindTexture(GL_TEXTURE_2D, _textureHandle_LOWRES);
 	glDrawElements(GL_TRIANGLES, _elements.size(), GL_UNSIGNED_INT, 0);
 }
 
@@ -254,26 +300,87 @@ Building::Building(glm::vec3 position, Size3<float> size)
 {
 }
 
+void Building::drawMode(bool fullRes)
+{
+	for (auto& b : _blocks)
+		b->drawMode(fullRes);
+}
+
 Building& Building::generate(glm::vec3 position, Size3<float> size)
 {
-	Building& b = *(new Building(position, size));
-	Size3<float> basesize, ofsize;
-	basesize = {size.width, 0.1, size.depth};
-	glm::vec3 baseOffset(0.05, 0.1, 0.05);
-	ofsize = {size.width - 2*baseOffset.x, 3.0, size.depth - 2*baseOffset.z};
-	
-	b.append(Block::base(glm::vec3(0.0, 0.0, 0.0), basesize));
-	b.append(Block::office(baseOffset, ofsize));
-	for (auto& block : Block::roof(baseOffset + glm::vec3(0.0, ofsize.height, 0.0), ofsize))
-		b.append(*block);
-	return b;
+	Building& building = *(new Building(position, size));
+	Size3<float> basesize{size}, s{0.0, 0.0, 0.0};
+	basesize.height = 0.1;
+	glm::vec3 v;
+
+	Block& base = Block::base(glm::vec3(0.0, 0.0, 0.0), basesize);
+	building.append(base);
+
+	base.metricsOnTop(0.1, v, s);
+	s.height = size.height;
+	Block& office = Block::windowed(v, s);
+	building.append(office);
+
+	office.metricsOnTop(0.0, v, s);
+	building.append(Block::roof(v, s));
+
+	return building;
+}
+
+Building& Building::apartments(glm::vec3 position, Size3<float> size)
+{
+	Building& building = *(new Building(position, size));
+	Size3<float> basesize{size};
+	basesize.height = 0.1;
+
+	Block& base = Block::base(glm::vec3(0.0, 0.0, 0.0), basesize);
+	building.append(base);
+
+
+	glm::vec3 v;
+	Size3<float> s{size};
+	s.width *= Rand::next(0.4, 0.6);
+	s.height *= Rand::next(0.8, 1.0);
+	s.depth *= Rand::next(0.4, 0.6);
+	base.randomPosOnTop(v, s);
+	Block& ap = Block::windowed(v, s);
+	building.append(ap);
+
+	glm::vec3 roof_v;
+	Size3<float> roof_s{0.0, 0.0, 0.0};
+	ap.metricsOnTop(0.0, roof_v, roof_s);
+	building.append(Block::roof(roof_v, roof_s));
+
+
+	int nbrApartments = 2;//{Rand::nextInt(1, 4)};
+	for (int i = 0; i < nbrApartments; i++)
+	{
+		s.width *= Rand::next(0.7, 1.0);
+		s.height *= Rand::next(0.6, 0.8);
+		s.depth *= Rand::next(0.7, 1.0);
+		base.randomPosOnTop(v, s);
+		Block& apartm = Block::windowed(v, s);
+		building.append(apartm);
+
+		apartm.metricsOnTop(0.0, roof_v, roof_s);
+		building.append(Block::roof(roof_v, roof_s));
+	}
+
+	return building;
+
 }
 
 void Building::append(Block& block)
 {
 	// box containing all blocks
-	// at the moment the box is kind fucked up
+	// at the moment the box is kind of fucked up
 	_blocks.push_back(&block);
+}
+
+void Building::append(std::vector<Block*> blocks)
+{
+	for (auto& block : blocks)
+		append(*block);
 }
 
 void Building::upload(GLuint programID)
@@ -290,7 +397,7 @@ void Building::draw()
 	{
 		glm::mat4 m = transformation()*block->transformation();
 		uploadMat4(_program, m, "MTW");
-		block->draw();
+		block->draw(false);
 	}
 }
 
@@ -298,4 +405,41 @@ Building::~Building()
 {
 	for (auto& block : _blocks)
 		delete block;
+}
+
+
+TownGrid::TownGrid()
+: _size{8, 8}
+{
+	for (int i = 0; i < _size.width; i++)
+		for (int j = 0; j < _size.height; j++)
+		{
+			Size3<float> townBlock{2.0, 5.0, 2.0};
+			float x = i*(townBlock.width + 0.5); // potential road included
+			float z = j*(townBlock.depth + 0.5);
+			glm::vec3 v{x, 0.0, z};
+			_buildings.push_back(&Building::apartments(v, townBlock));
+		}
+}
+
+void TownGrid::upload(GLuint programID)
+{
+	for (auto& b : _buildings)
+		b->upload(programID);
+}
+
+void TownGrid::draw()
+{
+	for (auto& b : _buildings)
+		b->draw();
+}
+
+void TownGrid::updateResolution(Camera& cam)
+{
+	for (auto& building : _buildings)
+	{
+		double dist = glm::length(cam.at() - building->at());
+		// std::cout << std::dec << dist << std::endl;
+		building->drawMode(dist < 24.0);
+	}
 }

@@ -34,7 +34,7 @@ protected:
 
 	Texture _texture;
 
-	GLuint _VAO, _TBO, _VBO, _EBO;
+	GLuint _VAO, _TBO, _VBO, _EBO, _CBO;
 	GLuint _program;
 	GLuint _textureHandle;
 

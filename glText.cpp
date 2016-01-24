@@ -60,11 +60,17 @@ Textbox::Textbox(glm::vec3 position, Size2<float> size)
 
 void Textbox::render()
 {
-	FT_Library library;
-	FT_Face face;
-	int error = FT_Init_FreeType(&library);
-	error = FT_New_Face(library, "resources/carbon.ttf", 0, &face);
-	error = FT_Set_Char_Size(face, 0, 16*64, 500, 500);
+	static FT_Library library;
+	static bool inited{false};
+	static FT_Face face;
+	int error;
+	if (!inited)
+	{
+		error = FT_Init_FreeType(&library);
+		error = FT_New_Face(library, "resources/carbon.ttf", 0, &face);
+		error = FT_Set_Char_Size(face, 0, 16*64, 500, 500);
+		inited = true;
+	}
 	
 	int min_width{0};
 	Size2<int> textureSize{0, 0};
@@ -100,9 +106,9 @@ void Textbox::render()
 	}
 	textureSize.width = min_width;
 	_texture.crop(textureSize);
-	// _texture = texture;
-		
-	FT_Done_FreeType(library);
+			
+	// not releasing atm, should really be done
+	// FT_Done_FreeType(library);
 }
 
 void Textbox::uploadTexture()

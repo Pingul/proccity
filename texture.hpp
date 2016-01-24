@@ -9,7 +9,7 @@ class Texture
 {
 public:
 	Texture(Size2<int> s) { setSize(s); }
-	Texture() = default;
+	Texture() : _size{0, 0} {}
 	Texture(const Texture&) = default;
 	~Texture() = default;
 

@@ -17,4 +17,5 @@ GLuint buildProgram(const char* vertexShaderFile, const char* fragmentShaderFile
 void uploadMat4(GLuint progID, const float* mat, const char* loc);
 void uploadMat4(GLuint progID, glm::mat4& mat, const char* loc);
 
+
 #endif

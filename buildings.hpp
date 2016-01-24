@@ -18,9 +18,6 @@ public:
 
 	void upload(GLuint programID);
 	void draw();
-	void draw(bool FULL_RES);
-
-	void drawMode(bool fullRes) { _drawFullRes = fullRes || !_textureLowResInited; }
 
 	static std::vector<Block*> roof(glm::vec3 position, Size3<float> size);
 	
@@ -31,18 +28,12 @@ public:
 	void randomPosOnTop(glm::vec3&, const Size3<float>&);
 
 private:
-	std::vector<GLfloat> createTextureCoords(float h, float hh, float w, float ww, float www);
+	bool _singleColor{true};
+	glm::vec3 _color{0.0, 0.0, 0.0};
 
-	bool _textureLowResInited{false};
-	bool _drawFullRes{true};
-	GLuint _textureHandle_LOWRES;
-	Texture _texture_LOWRES;
-
-	void createWindowTexture(bool FULL_RES = true);
 	void createWindowTextureCoords();
 
-	void createSingleColorTexture(glm::vec3 color = glm::vec3{0.0, 0.0, 0.0});
-	void createSingleColorTextureCoords();
+	void setColor(glm::vec3 c) { _color = c; }
 
 	void createElements();
 	void createVertices();
@@ -56,8 +47,6 @@ public:
 
 	void upload(GLuint programID);
 	void draw();
-
-	void drawMode(bool fullRes);
 
 	void append(Block&);
 	void append(std::vector<Block*>);
@@ -77,11 +66,14 @@ public:
 	void upload(GLuint programID);
 	void draw();
 
-	void updateResolution(Camera&);
-
 private:
 	Size2<int> _size;
 	std::vector<Building*> _buildings;
+
+	GLuint _textureHandle;
+	Texture _texture;
+
+	void createWindowTexture();
 };
 
 #endif

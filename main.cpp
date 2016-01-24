@@ -32,9 +32,6 @@ void initGeometry()
 	program = buildProgram("shaders/shader.vert", "shaders/shader.frag");
 	logError("after shaders");
 
-	// Size3<float> s{2.0, 5.0, 2.0};
-	// b = &Building::apartments(glm::vec3(0.0, 0.0, 0.0), s);
-	// b->upload(program);
 	town = new TownGrid();
 	town->upload(program);
 
@@ -66,8 +63,6 @@ void draw(float t)
 	glUseProgram(program);
 	camera->pollWindowForCameraMovement(window);
 	uploadMat4(program, glm::value_ptr(camera->WTVMatrix()), "WTV");
-	// b->draw();
-	town->updateResolution(*camera);
 	town->draw();
 
 	glDisable(GL_DEPTH_TEST);
@@ -79,7 +74,7 @@ void draw(float t)
 	static int it = 0;
 	fps += 1.0/(t - lastTime);
 	lastTime = t;
-	if (++it == 10)
+	if (++it == 20)
 	{
 		fps /= (float)it;
 		FPSTextboxCount->setText(std::to_string((int)round(fps)));

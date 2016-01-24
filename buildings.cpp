@@ -1,11 +1,18 @@
 #include <GL/glew.h>
 #include "buildings.hpp"
 #include "glUtilities.hpp"
+#include <glm/gtc/type_ptr.hpp>
 
 #include <exception>
 #include <iostream>
 #include <iomanip>
 #include <random>
+
+// G for global
+Size2<int> G_windowSize{5, 5};
+Size2<int> G_windowDist{5, 5};
+glm::ivec2 G_nbrWindows{500, 60};
+glm::vec2 G_windowsPerFloat{10.0, 8.0};
 
 class Rand
 {
@@ -48,138 +55,49 @@ void Block::createElements()
 	};
 }
 
-/*
-	Orientation
-	1	 --
-		|  |
-	hh	 -- -- -- --
-		|  |  |  |  |
-	h	 -- -- -- --
-		|  |
-	0	 --
-		0  w  ww www 1
-*/
-
-std::vector<GLfloat> Block::createTextureCoords(float h, float hh, float w, float ww, float www)
-{
-	std::vector<GLfloat> coords = 
-	{
-		0.0, h,  w, h,  w, 0.0,  0.0, 0.0,
-		0.0, hh,  w, hh,  w, 1.0,  0.0, 1.0,
-		0.0, h,  w, h,  w, hh,  0.0, hh, 
-		w, h,  ww, h,  ww, hh,  w, hh,
-		ww, h,  www, h,  www, hh,  ww, hh,
-		www, h,  1.0, h,  1.0, hh,  www, hh,
-	};
-	return coords;
-}
-
 void Block::createWindowTextureCoords()
 {
-	float h{1.f/100.f};
-	float hh{99.f/100.f};
-	float w{_size.width/(2*_size.width + 2*_size.depth)};
-	float ww{(_size.width + _size.depth)/(2*_size.width + 2*_size.depth)};
-	float www{(2*_size.width + _size.depth)/(2*_size.width + 2*_size.depth)};
-	_texCoords = createTextureCoords(h, hh, w, ww, www);
-}
+	// This is a very messy algorithm
+	_singleColor = false;
 
-void Block::createWindowTexture(bool FULL_RES)
-{
-	// std::default_random_engine generator;
-	// std::uniform_real_distribution<float> distribution{0.0, 1.0};
+	Size2<float> totalTextureSize{
+		(float)(G_windowDist.width + G_nbrWindows.x*(G_windowSize.width + G_windowDist.width)),
+		(float)(G_windowDist.height + G_nbrWindows.y*(G_windowSize.height + G_windowDist.height))
+	};
 
-	// Evenly distribute as many as possible through each side
-	int pixelsPerFloat{100};
-	Size2<int> windowsPerFloat{10, 8};
-	Size2<int> windowSize{3, 2};
-	Texture* texture{&_texture};
+	Size3<float> windowsPerDim{
+		(float)round(_size.width*G_windowsPerFloat.x),
+		(float)round(_size.height*G_windowsPerFloat.y),
+		(float)round(_size.depth*G_windowsPerFloat.x),
+	};
 
-	if (!FULL_RES)
+	float hStartAt = Rand::nextInt(0, G_nbrWindows.y - windowsPerDim.height);
+	float wStartAt = Rand::nextInt(0, G_nbrWindows.x - 2*windowsPerDim.width - 2*windowsPerDim.depth);
+
+	float h = ((float)G_windowSize.height/2.f + (hStartAt*(float)(G_windowSize.height + G_windowDist.height)))/totalTextureSize.height;
+	float hh = h + (windowsPerDim.height*(float)(G_windowSize.height + G_windowDist.height))/totalTextureSize.height;
+	float w0 = ((float)G_windowSize.width/2.f + (wStartAt*(float)(G_windowSize.width + G_windowDist.width)))/totalTextureSize.width;
+	float w = w0 + (windowsPerDim.width*(float)(G_windowSize.width + G_windowDist.width))/totalTextureSize.width;
+	float ww = w + (windowsPerDim.depth*(float)(G_windowSize.width + G_windowDist.width))/totalTextureSize.width;
+	float www = ww + w - w0;
+	float wwww = 2*ww - w0;
+
+	_texCoords = 
 	{
-		pixelsPerFloat = 50;
-		windowsPerFloat = {5, 4};
-		windowSize = {3, 2};
-		texture = &_texture_LOWRES;
-		_textureLowResInited = true;
-		// std::cout << "lowres" << std::endl;
-	}
-
-	texture->setSize(Size2<int>{
-		(int)(pixelsPerFloat*(_size.width*2 + _size.depth*2)), 
-		(int)(pixelsPerFloat*_size.height + 2)
-	});
-
-	int sideOffset = 0;
-	for (int side = 1; side < 5; side++)
-	{
-		float width = side % 2 == 1 ? _size.width : _size.depth;
-		glm::vec2 nbrWindows = {
-			floor(width*windowsPerFloat.width),
-			floor(_size.height*windowsPerFloat.height)
-		};
-
-		glm::vec2 cubeSide{width*pixelsPerFloat, _size.height*pixelsPerFloat};
-		glm::vec2 windowOffsets{cubeSide.x/nbrWindows.x, cubeSide.y/nbrWindows.y};
-
-		for (int x = 1; x < nbrWindows.x; x++)
-		{
-			for (int y = 1; y < nbrWindows.y; y++)
-			{
-				GLfloat color{Rand::nextNormal()};
-				for (int i = -windowSize.width; i < windowSize.width; i++)
-				{
-					for (int j = -windowSize.height; j < windowSize.height; j++)
-					{
-						glm::ivec2 pixel = {
-							(int)round(windowOffsets.x*x) + i + sideOffset,
-							(int)round(windowOffsets.y*y) + j,
-						};
-
-						size_t index{texture->index(pixel.x, pixel.y)};
-						texture->pixels[3*index] = color;
-						texture->pixels[3*index + 1] = color;
-						texture->pixels[3*index + 2] = color;
-					}
-				}
-			}
-		}
-		sideOffset += cubeSide.x;
-	}
+		0.0, 0.0,  0.0, 0.0,  0.0, 0.0,  0.0, 0.0,
+		1.0, 1.0,  1.0, 1.0,  1.0, 1.0,  1.0, 1.0,
+		w0, h,  w, h,  w, hh,  w0, hh, 
+		w, h,  ww, h,  ww, hh,  w, hh,
+		ww, h,  www, h,  www, hh,  ww, hh,
+		www, h,  wwww, h,  wwww, hh,  www, hh,
+	};
 }
-
-void Block::createSingleColorTexture(glm::vec3 color)
-{
-	Size2<int> size{4, 3};
-	_texture.setSize(size);
-	for (int j = 0; j < size.height; j++)
-		for (int i = 0; i < size.width; i++)
-		{
-			size_t index = _texture.index(i, j);
-			_texture.pixels[3*index] = color.x;
-			_texture.pixels[3*index + 1] = color.y;
-			_texture.pixels[3*index + 2] = color.z;
-		}
-}
-
-void Block::createSingleColorTextureCoords()
-{
-	float h{1.0/3.0};
-	float hh{2.0/30};
-	float w{1.0/4.0};
-	float ww{2.0/4.0};
-	float www{3.0/4.0};
-	_texCoords = createTextureCoords(h, hh, w, ww, www);
-}
-
 
 Block::Block(glm::vec3 position, Size3<float> size)
 : Drawable(position, size)
 {
 	createVertices();
 	createElements();
-	// createWindowTextureCoords();
-	// createWindowTexture();
 }
 
 void Block::metricsOnTop(float padding, glm::vec3& at, Size3<float>& size)
@@ -208,8 +126,7 @@ std::vector<Block*> Block::roof(glm::vec3 position, Size3<float> size)
 	glm::vec3 color{0.05, 0.05, 0.05};
 
 	Block& b = *(new Block(position, {size.width, Rand::next(0.05, 0.25), size.depth}));
-	b.createSingleColorTexture(color);
-	b.createSingleColorTextureCoords();
+	b.setColor(color);
 	blocks.push_back(&b);
 	
 	int r = Rand::nextInt(0, 2);
@@ -223,8 +140,7 @@ std::vector<Block*> Block::roof(glm::vec3 position, Size3<float> size)
 		top->metricsOnTop(Rand::next(0.01, 0.1), pos, s);
 		s.height = Rand::next(0.05, top->dim().height);
 		top = new Block(pos, s);
-		top->createSingleColorTexture(color);
-		top->createSingleColorTextureCoords();
+		top->setColor(color);
 		blocks.push_back(top);
 	}
 
@@ -236,74 +152,42 @@ Block& Block::windowed(glm::vec3 position, Size3<float> size)
 {
 	Block& b = *(new Block(position, size));
 	b.createWindowTextureCoords();
-	b.createWindowTexture(false);
-	b.createWindowTexture();
 	return b;
 }
 
 Block& Block::base(glm::vec3 position, Size3<float> size)
 {
 	Block& b = *(new Block(position, size));
-	b.createSingleColorTexture();
-	b.createSingleColorTextureCoords();
 	return b;
 }
 
 
 void Block::upload(GLuint programID)
 {
-	Drawable::upload(programID);	
-
-	glBindTexture(GL_TEXTURE_2D, _textureHandle);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	// glGenerateMipmap(GL_TEXTURE_2D); // This makes everything significantly slower
-
-	if (_textureLowResInited)
-	{
-		glGenTextures(1, &_textureHandle_LOWRES);
-		glBindTexture(GL_TEXTURE_2D, _textureHandle_LOWRES);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, _texture_LOWRES.size().width, _texture_LOWRES.size().height, 0, GL_RGB, GL_FLOAT, _texture_LOWRES.pixels.data());
-	}
-
-	_texture.setSize({0, 0});
-	_texture_LOWRES.setSize({0, 0});
+	Drawable::upload(programID);
 
 	glUniform1i(glGetUniformLocation(programID, "windowTexture"), 0); // combines with GL_TEXTURE0 in draw
+	logError("after block");
 }
+
 
 void Block::draw()
 {
-	draw(true);
-}
-
-void Block::draw(bool FULL_RES)
-{
-
 	glBindVertexArray(_VAO);
-	glActiveTexture(GL_TEXTURE0);
-	if (_drawFullRes)
-		glBindTexture(GL_TEXTURE_2D, _textureHandle);
+	// probably more efficient to upload these together with the object, instead of sending loads every draw call
+	if (_singleColor)
+	{
+		glUniform3f(glGetUniformLocation(_program, "uniformColor"), _color.x, _color.y, _color.z);
+		glUniform1i(glGetUniformLocation(_program, "showColor"), true);
+	}
 	else
-		glBindTexture(GL_TEXTURE_2D, _textureHandle_LOWRES);
+		glUniform1i(glGetUniformLocation(_program, "showColor"), false);
 	glDrawElements(GL_TRIANGLES, _elements.size(), GL_UNSIGNED_INT, 0);
 }
 
 Building::Building(glm::vec3 position, Size3<float> size)
 : Drawable(position, size)
 {
-}
-
-void Building::drawMode(bool fullRes)
-{
-	for (auto& b : _blocks)
-		b->drawMode(fullRes);
 }
 
 Building& Building::generate(glm::vec3 position, Size3<float> size)
@@ -314,15 +198,15 @@ Building& Building::generate(glm::vec3 position, Size3<float> size)
 	glm::vec3 v;
 
 	Block& base = Block::base(glm::vec3(0.0, 0.0, 0.0), basesize);
-	building.append(base);
+	// building.append(base);
 
 	base.metricsOnTop(0.1, v, s);
 	s.height = size.height;
 	Block& office = Block::windowed(v, s);
 	building.append(office);
 
-	office.metricsOnTop(0.0, v, s);
-	building.append(Block::roof(v, s));
+	// office.metricsOnTop(0.0, v, s);
+	// building.append(Block::roof(v, s));
 
 	return building;
 }
@@ -351,7 +235,6 @@ Building& Building::apartments(glm::vec3 position, Size3<float> size)
 	ap.metricsOnTop(0.0, roof_v, roof_s);
 	building.append(Block::roof(roof_v, roof_s));
 
-
 	int nbrApartments = 2;//{Rand::nextInt(1, 4)};
 	for (int i = 0; i < nbrApartments; i++)
 	{
@@ -365,7 +248,6 @@ Building& Building::apartments(glm::vec3 position, Size3<float> size)
 		apartm.metricsOnTop(0.0, roof_v, roof_s);
 		building.append(Block::roof(roof_v, roof_s));
 	}
-
 	return building;
 
 }
@@ -397,7 +279,7 @@ void Building::draw()
 	{
 		glm::mat4 m = transformation()*block->transformation();
 		uploadMat4(_program, m, "MTW");
-		block->draw(false);
+		block->draw();
 	}
 }
 
@@ -409,37 +291,90 @@ Building::~Building()
 
 
 TownGrid::TownGrid()
-: _size{8, 8}
+: _size{10, 10}
 {
 	for (int i = 0; i < _size.width; i++)
 		for (int j = 0; j < _size.height; j++)
 		{
-			Size3<float> townBlock{2.0, 5.0, 2.0};
+			Size3<float> townBlock{2.0, Rand::next(2.0, 6.0), 2.0};
 			float x = i*(townBlock.width + 0.5); // potential road included
 			float z = j*(townBlock.depth + 0.5);
 			glm::vec3 v{x, 0.0, z};
 			_buildings.push_back(&Building::apartments(v, townBlock));
+			// _buildings.push_back(&Building::generate(v, townBlock));
 		}
+
+	createWindowTexture();
+	logError("town complete");
 }
 
 void TownGrid::upload(GLuint programID)
 {
+	glGenTextures(1, &_textureHandle);
+	glBindTexture(GL_TEXTURE_2D, _textureHandle);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, _texture.size().width, _texture.size().height, 0, GL_RGB, GL_FLOAT, _texture.pixels.data());
+	
 	for (auto& b : _buildings)
 		b->upload(programID);
+
+	logError("town uploaded");
 }
 
 void TownGrid::draw()
 {
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, _textureHandle);
+
 	for (auto& b : _buildings)
 		b->draw();
 }
 
-void TownGrid::updateResolution(Camera& cam)
+void TownGrid::createWindowTexture()
 {
-	for (auto& building : _buildings)
+	_texture.setSize(Size2<int>{
+		(int)(G_windowDist.width + G_nbrWindows.x*(G_windowSize.width + G_windowDist.width)),
+		(int)(G_windowDist.height + G_nbrWindows.y*(G_windowSize.height + G_windowDist.height))
+	});
+
+	bool lastLit{false};
+
+	GLfloat color;
+	for (int y = 0; y < G_nbrWindows.y; y++)
 	{
-		double dist = glm::length(cam.at() - building->at());
-		// std::cout << std::dec << dist << std::endl;
-		building->drawMode(dist < 24.0);
+		for (int x = 0; x < G_nbrWindows.x; x++)
+		{
+			glm::ivec2 coord{
+				G_windowDist.width + x*(G_windowSize.width + G_windowDist.width),
+				G_windowDist.height + y*(G_windowSize.height + G_windowDist.height),
+			};
+
+			float v{Rand::next()};
+			if (lastLit)
+				lastLit = v < 0.7 ? true : false;
+			else
+				lastLit = v < 0.9 ? false : true;
+			color = lastLit ? Rand::next(0.5, 1.0) : 0.0;
+
+			for (int i = 0; i < G_windowSize.width; i++)
+			{
+				for (int j = 0; j < G_windowSize.height; j++)
+				{
+					glm::ivec2 pixel = {
+						coord.x + i,
+						coord.y + j,
+					};
+
+					size_t index{_texture.index(pixel.x, pixel.y)};
+					_texture.pixels[3*index] = color*0.99;
+					_texture.pixels[3*index + 1] = color*0.98;
+					_texture.pixels[3*index + 2] = color*0.85;
+				}
+			}
+		}
 	}
 }

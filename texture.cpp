@@ -28,3 +28,17 @@ void Texture::crop(Size2<int> size)
 	}
 	pixels = newPixels;
 }
+
+void Texture::setColor(glm::vec3 c)
+{
+	for (size_t y = 0; y < _size.height; y++)
+	{
+		for (size_t x = 0; x < _size.width; x++)
+		{
+			size_t idx{index(x, y)};
+			pixels[3*idx] = c.x;
+			pixels[3*idx + 1] = c.y;
+			pixels[3*idx + 2] = c.z;
+		}
+	}
+}

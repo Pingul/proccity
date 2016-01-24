@@ -19,7 +19,7 @@ public:
 	void upload(GLuint programID);
 	void draw();
 
-	static std::vector<Block*> roof(glm::vec3 position, Size3<float> size);
+	static std::vector<Block*> tiledRoof(glm::vec3 position, Size3<float> size);
 	
 	static Block& windowed(glm::vec3 position, Size3<float> size);
 	static Block& base(glm::vec3 position, Size3<float> size);

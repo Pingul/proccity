@@ -10,9 +10,9 @@
 
 // G for global
 Size2<int> G_windowSize{5, 5};
-Size2<int> G_windowDist{5, 5};
+Size2<int> G_windowDist{2, 4};
 glm::ivec2 G_nbrWindows{500, 60};
-glm::vec2 G_windowsPerFloat{10.0, 8.0};
+glm::vec2 G_windowsPerFloat{12.0, 9.0};
 
 class Rand
 {
@@ -71,8 +71,8 @@ void Block::createWindowTextureCoords()
 		(float)round(_size.depth*G_windowsPerFloat.x),
 	};
 
-	float hStartAt = Rand::nextInt(0, G_nbrWindows.y - windowsPerDim.height);
-	float wStartAt = Rand::nextInt(0, G_nbrWindows.x - 2*windowsPerDim.width - 2*windowsPerDim.depth);
+	float hStartAt = Rand::nextInt(0, G_nbrWindows.y);
+	float wStartAt = Rand::nextInt(0, G_nbrWindows.x);
 
 	float h = ((float)G_windowSize.height/2.f + (hStartAt*(float)(G_windowSize.height + G_windowDist.height)))/totalTextureSize.height;
 	float hh = h + (windowsPerDim.height*(float)(G_windowSize.height + G_windowDist.height))/totalTextureSize.height;
@@ -120,7 +120,7 @@ void Block::randomPosOnTop(glm::vec3& v, const Size3<float>& otherSize)
 	v.z = _position.z + z;
 }
 
-std::vector<Block*> Block::roof(glm::vec3 position, Size3<float> size)
+std::vector<Block*> Block::tiledRoof(glm::vec3 position, Size3<float> size)
 {
 	std::vector<Block*> blocks;
 	glm::vec3 color{0.05, 0.05, 0.05};
@@ -206,7 +206,7 @@ Building& Building::generate(glm::vec3 position, Size3<float> size)
 	building.append(office);
 
 	// office.metricsOnTop(0.0, v, s);
-	// building.append(Block::roof(v, s));
+	// building.append(Block::tiledRoof(v, s));
 
 	return building;
 }
@@ -233,7 +233,7 @@ Building& Building::apartments(glm::vec3 position, Size3<float> size)
 	glm::vec3 roof_v;
 	Size3<float> roof_s{0.0, 0.0, 0.0};
 	ap.metricsOnTop(0.0, roof_v, roof_s);
-	building.append(Block::roof(roof_v, roof_s));
+	building.append(Block::tiledRoof(roof_v, roof_s));
 
 	int nbrApartments = 2;//{Rand::nextInt(1, 4)};
 	for (int i = 0; i < nbrApartments; i++)
@@ -246,7 +246,7 @@ Building& Building::apartments(glm::vec3 position, Size3<float> size)
 		building.append(apartm);
 
 		apartm.metricsOnTop(0.0, roof_v, roof_s);
-		building.append(Block::roof(roof_v, roof_s));
+		building.append(Block::tiledRoof(roof_v, roof_s));
 	}
 	return building;
 
@@ -312,8 +312,8 @@ void TownGrid::upload(GLuint programID)
 {
 	glGenTextures(1, &_textureHandle);
 	glBindTexture(GL_TEXTURE_2D, _textureHandle);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glGenerateMipmap(GL_TEXTURE_2D);

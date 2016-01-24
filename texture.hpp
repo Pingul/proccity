@@ -3,6 +3,7 @@
 
 #include <GL/glew.h>
 #include <vector>
+#include <glm/glm.hpp>
 #include "geometryUtils.hpp"
 
 class Texture
@@ -23,6 +24,8 @@ public:
 
 	// Preserves the texture and resizes
 	void crop(Size2<int> size);
+
+	void setColor(glm::vec3);
 private:
 	Size2<int> _size;
 };

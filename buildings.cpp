@@ -143,9 +143,15 @@ std::vector<Block*> Block::tiledRoof(glm::vec3 position, Size3<float> size)
 		top->setColor(color);
 		blocks.push_back(top);
 	}
-
-
 	return blocks;
+}
+
+Block& Block::roof(glm::vec3 position, Size3<float> size)
+{
+	size.height = 0.05;
+	Block& b = *(new Block(position, size));
+	b.setColor({0.05, 0.05, 0.05});
+	return b;
 }
 
 Block& Block::windowed(glm::vec3 position, Size3<float> size)
@@ -157,6 +163,7 @@ Block& Block::windowed(glm::vec3 position, Size3<float> size)
 
 Block& Block::base(glm::vec3 position, Size3<float> size)
 {
+	size.height = 0.1;
 	Block& b = *(new Block(position, size));
 	return b;
 }
@@ -252,6 +259,38 @@ Building& Building::apartments(glm::vec3 position, Size3<float> size)
 
 }
 
+Building& Building::stacked(glm::vec3 position, Size3<float> size)
+{
+	Building& building = *(new Building(position, size));
+	Size3<float> basesize{size};
+
+	Block& base = Block::base(glm::vec3(0.0, 0.0, 0.0), basesize);
+	building.append(base);
+
+	Block& top = base;
+	glm::vec3 v;
+	Size3<float> s;
+
+	int nbrStacks = 3;
+	for (int i = 0; i < nbrStacks; i++)
+	{
+		top.metricsOnTop(0.1, v, s);
+		s.height = 1.5;
+		Block& stack = Block::windowed(v, s);
+		building.append(stack);
+
+		stack.metricsOnTop(0.0, v, s);
+		Block& roof = Block::roof(v, s);
+		building.append(roof);
+		top = roof;
+	}
+
+	top.metricsOnTop(0.0, v, s);
+	building.append(Block::tiledRoof(v, s));
+
+	return building;
+}
+
 void Building::append(Block& block)
 {
 	// box containing all blocks
@@ -291,16 +330,16 @@ Building::~Building()
 
 
 TownGrid::TownGrid()
-: _size{10, 10}
+: _size{1, 1}
 {
 	for (int i = 0; i < _size.width; i++)
 		for (int j = 0; j < _size.height; j++)
 		{
-			Size3<float> townBlock{2.0, Rand::next(2.0, 6.0), 2.0};
+			Size3<float> townBlock{4.0, Rand::next(2.0, 6.0), 2.0};
 			float x = i*(townBlock.width + 0.5); // potential road included
 			float z = j*(townBlock.depth + 0.5);
 			glm::vec3 v{x, 0.0, z};
-			_buildings.push_back(&Building::apartments(v, townBlock));
+			_buildings.push_back(&Building::stacked(v, townBlock));
 			// _buildings.push_back(&Building::generate(v, townBlock));
 		}
 

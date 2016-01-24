@@ -23,6 +23,7 @@ public:
 	
 	static Block& windowed(glm::vec3 position, Size3<float> size);
 	static Block& base(glm::vec3 position, Size3<float> size);
+	static Block& roof(glm::vec3 position, Size3<float> size);
 
 	void metricsOnTop(float padding, glm::vec3&, Size3<float>&);
 	void randomPosOnTop(glm::vec3&, const Size3<float>&);
@@ -54,6 +55,7 @@ public:
 	// We only care about width and depth here
 	static Building& generate(glm::vec3 position, Size3<float> size);
 	static Building& apartments(glm::vec3 position, Size3<float> size);
+	static Building& stacked(glm::vec3 position, Size3<float> size);
 private:
 	std::vector<Block*> _blocks;
 };
